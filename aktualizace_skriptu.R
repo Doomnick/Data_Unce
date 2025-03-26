@@ -1,11 +1,15 @@
-library(shiny)
-library(rstudioapi)
+library(jsonlite)
+library(httr)
 library(fs)
+library(rstudioapi)
 
-aktualizovat_app <- F
-# ---- AUTOMATICKÁ AKTUALIZACE ZE ZIPU NA GITHUBU ----
-repo_url <- "https://github.com/Doomnick/WingateApp/archive/refs/heads/main.zip"
+# Nastavení
+repo <- "Doomnick/Data_Unce"
+branch <- "main"
+sha_file <- file.path(getwd(), "last_sha.txt")
+repo_url <- "https://github.com/Doomnick/Data_Unce/archive/refs/heads/main.zip"
 
+# Pomocná funkce – zjisti aktuální složku skriptu
 get_script_dir <- function() {
   if (requireNamespace("rstudioapi", quietly = TRUE) &&
       rstudioapi::isAvailable()) {
@@ -17,37 +21,61 @@ get_script_dir <- function() {
 
 local_dir <- get_script_dir()
 
-# Dočasný ZIP soubor a rozbalovací složka
-temp_zip <- tempfile(fileext = ".zip")
-temp_extract <- tempfile()
+# Získání SHA posledního commitu z GitHubu
+get_latest_sha <- function(repo, branch = "main") {
+  url <- sprintf("https://api.github.com/repos/%s/commits/%s", repo, branch)
+  res <- httr::GET(url)
+  if (res$status_code != 200) stop("Nepodařilo se získat SHA z GitHubu.")
+  json <- content(res, as = "text", encoding = "UTF-8")
+  data <- fromJSON(json)
+  return(data$sha)
+}
 
-# Stáhni ZIP z GitHubu
-download.file(repo_url, temp_zip, mode = "wb")
+# Načti a ulož SHA
+get_saved_sha <- function(path) {
+  if (file_exists(path)) readLines(path, warn = FALSE) else NULL
+}
+save_sha <- function(sha, path) {
+  writeLines(sha, path)
+}
 
-# Rozbal dočasně
-unzip(temp_zip, exdir = temp_extract)
+# --- Kontrola a případná aktualizace ---
+latest_sha <- get_latest_sha(repo, branch)
+saved_sha <- get_saved_sha(sha_file)
 
-# Cesta ke složce s rozbaleným obsahem (např. "WingateApp-main")
-unzipped_dir <- file.path(temp_extract, "WingateApp-main")
-
-# Přepiš .R a .Rmd soubory, které již existují v lokální složce
-files_to_copy <- list.files(unzipped_dir, pattern = "\\.(R|Rmd)$", recursive = TRUE, full.names = TRUE)
-
-for (file in files_to_copy) {
-  relative_path <- path_rel(file, start = unzipped_dir)
+if (is.null(saved_sha) || saved_sha != latest_sha) {
+  message("🔄 Nová verze k dispozici. Spouštím aktualizaci...")
   
-  # Pokud nemáme přepisovat app.R, přeskočíme ho
-  if (!aktualizovat_app && basename(relative_path) == "app.R") {
-    message("⏭️ Přeskočeno (aktualizovat_app = FALSE): ", relative_path)
-    next
+  # Dočasný ZIP a extrakce
+  temp_zip <- tempfile(fileext = ".zip")
+  temp_extract <- tempfile()
+  
+  # Stáhni ZIP z GitHubu
+  download.file(repo_url, temp_zip, mode = "wb")
+  unzip(temp_zip, exdir = temp_extract)
+  
+  # Cesta k rozbalené složce
+  unzipped_dir <- file.path(temp_extract, "Data_Unce-main")
+  
+  # Soubory k aktualizaci
+  update_files <- c("report.Rmd", "spusteni.R")
+  
+  for (file_name in update_files) {
+    file_path <- file.path(unzipped_dir, file_name)
+    target_path <- file.path(local_dir, file_name)
+    
+    if (file_exists(file_path)) {
+      file.copy(file_path, target_path, overwrite = TRUE)
+      message("✅ Aktualizován: ", file_name)
+    } else {
+      message("⚠️ Soubor nenalezen v repozitáři: ", file_name)
+    }
   }
   
-  target_path <- file.path(local_dir, relative_path)
+  # Ulož nový SHA
+  save_sha(latest_sha, sha_file)
+  message("📌 SHA uložen: ", latest_sha)
   
-  # Vytvoř cílovou složku, pokud ještě neexistuje
-  dir.create(dirname(target_path), recursive = TRUE, showWarnings = FALSE)
-  
-  # Kopíruj soubor
-  file.copy(file, target_path, overwrite = TRUE)
-  message("✅ Aktualizován nebo vytvořen: ", relative_path)
+} else {
+  message("✅ Máš aktuální verzi. Není třeba aktualizovat.")
 }

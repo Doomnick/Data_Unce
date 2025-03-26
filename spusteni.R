@@ -10,8 +10,35 @@ script_dir <- dirname(script_path)
 
 plan(multisession)  
 
-file_path <- file.path(script_dir, "data.xlsx")
-data <- read_excel(file_path)
+script_path <- rstudioapi::getActiveDocumentContext()$path
+script_dir <- dirname(script_path)
+
+invisible_root <- tktoplevel()
+tkwm.withdraw(invisible_root)  # Skryje okno, ale umožní použít jako parent
+
+# Nastavení okna jako vždy navrchu (topmost)
+tcl("wm", "attributes", invisible_root, topmost = TRUE)
+
+# Výběr souboru (okno bude mít prioritu)
+selected_file <- tclvalue(tkgetOpenFile(
+  title = "Vyberte soubor s daty (data.xlsx)",
+  initialdir = script_dir,
+  filetypes = "{{Excel Files} {.xlsx}} {{All files} *}",
+  parent = invisible_root
+))
+
+# Zruš parent po výběru
+tkdestroy(invisible_root)
+
+# Pokud nebyl soubor vybrán, ukonči skript
+if (selected_file == "") {
+  stop("❌ Nebyl vybrán žádný vstupní soubor. Ukončuji skript.")
+} else {
+  message("📄 Vybraný soubor s daty: ", selected_file)
+}
+
+# Načtení dat
+data <- read_excel(selected_file)
 
 # Explicitní seznam sloupců použitých v reportu
 required_columns <- c(
@@ -99,8 +126,9 @@ valid_data <- filtered_data %>%
   filter(!apply(select(., all_of(required_columns)), 1, anyNA))
 
 # Vytvoření složky pro reporty
-output_dir <- file.path(script_dir, school_code)
-dir.create(output_dir, showWarnings = FALSE)
+data_dir <- dirname(selected_file)
+output_dir <- file.path(data_dir, school_code)
+dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
 
 # Generování reportů paralelně
 generate_report <- function(row) {
@@ -153,7 +181,7 @@ completed_reports <- Filter(function(x) x$status == "success", results)
 failed_reports <- Filter(function(x) x$status == "failed", results)
 
 # Uložení logu s úspěšnými a neúspěšnými generacemi
-log_file <- file.path(script_dir, paste0("log_", school_code, "_", format(Sys.time(), "%Y-%m-%d_%H-%M"), ".txt"))
+log_file <- file.path(data_dir, paste0("log_", school_code, "_", format(Sys.time(), "%Y-%m-%d_%H-%M"), ".txt"))
 
 num_completed <- length(completed_reports)
 num_failed <- length(failed_reports)
