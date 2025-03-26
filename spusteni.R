@@ -5,7 +5,7 @@ library(lubridate)
 rm(list = ls())
 pacman::p_load(readxl, dplyr, stringr, parallel, future.apply, rmarkdown, readr)
 
-#test
+
 if (requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
   script_path <- rstudioapi::getActiveDocumentContext()$path
   script_dir <- dirname(script_path)
