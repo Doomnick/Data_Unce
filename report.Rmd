@@ -1,0 +1,535 @@
+---
+title: "Protokol Hodnocení"
+output: 
+  bookdown::pdf_document2:
+    number_sections: false
+    toc: false
+    latex_engine: xelatex
+fontsize: 12pt
+geometry: a4paper, left=1.5cm, right=1.5cm, top=2.5cm, bottom=2cm
+mainfont: "Calibri"
+header-includes: |
+  \pagenumbering{arabic}
+  \usepackage{silence}
+  \WarningsOff[fancyhdr]
+  \usepackage{multirow}
+  \usepackage{titling}
+  \usepackage{placeins}
+  \usepackage{colortbl}
+  \setlength{\droptitle}{-3cm}
+  \setlength{\headsep}{1.5cm}
+  \pretitle{\begin{center}\LARGE\includegraphics[width=8cm]{logo.png}\\[\bigskipamount]}
+  \posttitle{\end{center}}
+  \preauthor{\begin{center}\large}
+  \postauthor{\end{center}\vspace{-2.5cm}} % Sníží mezeru pod autorem
+
+  \usepackage{fancyhdr}      
+  \usepackage{graphicx}      
+  \usepackage{xcolor}        
+
+  % Definice barev
+  \definecolor{darkred}{RGB}{178,34,34}
+  \definecolor{darkgreen}{RGB}{34,139,34}
+  \definecolor{darkblue}{RGB}{0,0,139}
+  \definecolor{headerbg}{RGB}{173, 216, 230}
+  \definecolor{headertext}{RGB}{0, 0, 139}
+
+  % Nastavení záhlaví s logem posunutým výš
+  \fancypagestyle{mystyle}{
+    \fancyhf{}
+    \fancyhead[L]{\raisebox{20pt}{\includegraphics[width=5cm]{logo.png}}}
+    \fancyhead[C]{\textcolor{darkblue}{\textbf{\Large Protokol hodnocení}}}
+    \fancyfoot[C]{\thepage} % Přidá číslo stránky do středu zápatí
+    \renewcommand{\headrulewidth}{0pt}
+  }
+  % Aktivace záhlaví na všech stránkách včetně první
+  \AtBeginDocument{%
+    \pagestyle{mystyle}
+    \thispagestyle{mystyle} 
+  }
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+```
+```{r, results='asis'}
+# library(readxl)
+# script_path <- rstudioapi::getActiveDocumentContext()$path
+# script_dir <- dirname(script_path)
+# file_path <- file.path(script_dir, "Data pro reporty a analýzu dat.xlsx")
+# data <- read_excel(file_path)
+# df <- data[4,]
+
+cat(paste0("
+\\begin{center}
+\\section*{", df$Name, "}
+\\end{center}
+"))
+```
+
+
+Níže Vám posíláme výsledky Vašeho dítěte v oblastech pohybové gramotnosti, motivace ke cvičení, kognice, motorických kompetencí, kardiorespirační zdatnosti, objemu a intenzity pohybové aktivity a tělesného složení.
+
+\noindent \vspace{-0.3cm}
+
+\colorbox{headerbg}{\parbox{\textwidth}{\raggedright \textcolor{headertext}{\Large \textbf{Pohybová gramotnost}}}}
+
+```{r plot}
+library(ggplot2)
+library(tidyverse)
+library(officer)
+# Funkce pro převod kategorií percentilů na číselné hodnoty
+convert_percentile <- function(x) {
+  case_when(
+    x == 1 ~ 12.5,
+    x == 2 ~ 37.5,
+    x == 3 ~ 62.5,
+    x == 4 ~ 87.5,
+    TRUE ~ NA_real_
+  )
+}
+
+# Funkce pro vytvoření grafu
+create_student_plot <- function(student_data) {
+  domains <- c("Fyzická", "Psychologická", "Sociální", "Kognitivní", "Celkové")
+  percentile_levels <- c("POD 25. percentil", "25.-50. percentil", "50.-75. percentil", "75. percentil a výše")
+
+  # Výběr hodnot z jediného řádku v df (předpokládá se, že df má 1 řádek)
+  values <- c(
+    convert_percentile(student_data$PL_physical[1]),
+    convert_percentile(student_data$PL_psychological[1]),
+    convert_percentile(student_data$PL_Social[1]),
+    convert_percentile(student_data$PL_Cognitive[1]),
+    convert_percentile(student_data$PL_overall[1])
+  )
+
+  # Data pro graf
+  plot_data <- data.frame(
+    domain = factor(domains, levels = domains),
+    value = values
+  )
+
+  # Data pro legendu
+  legend_data <- data.frame(
+    domain = rep("", length(percentile_levels)),
+    value = rep(0, length(percentile_levels)),
+    percentile = factor(percentile_levels, levels = percentile_levels)
+  )
+
+  # Přidání percentilové kategorie do `plot_data`
+  plot_data$percentile <- factor(
+    case_when(
+      values <= 25 ~ "POD 25. percentil",
+      values <= 50 ~ "25.-50. percentil",
+      values <= 75 ~ "50.-75. percentil",
+      TRUE ~ "75. percentil a výše"
+    ),
+    levels = percentile_levels
+  )
+
+  # Vykreslení grafu
+  p <- ggplot() +
+    geom_vline(xintercept = 4.5, linetype = "dashed", color = "gray50", size = 0.5) +
+    geom_bar(data = legend_data, 
+             aes(x = domain, y = value, fill = percentile),
+             stat = "identity", width = 0, show.legend = TRUE) +
+    geom_bar(data = plot_data,
+             aes(x = domain, y = value, fill = percentile),
+             stat = "identity", show.legend = FALSE) +
+    scale_fill_manual(
+      values = c(
+        "POD 25. percentil" = "#FF0000",
+        "25.-50. percentil" = "#FFA500",
+        "50.-75. percentil" = "#90EE90",
+        "75. percentil a výše" = "#87CEEB"
+      ),
+      name = NULL
+    ) +
+    scale_y_continuous(
+      limits = c(0, 100),
+      breaks = seq(0, 100, 25),
+      labels = seq(0, 100, 25)
+    ) +
+    scale_x_discrete(limits = domains) +
+    labs(x = "Oblast", y = "Percentil") +
+    theme_minimal() +
+    theme(
+      legend.position = "top",
+      legend.direction = "horizontal",
+      legend.box.margin = margin(-10, 0, -10, 0),
+      legend.key.size = unit(0.6, "cm"),
+      legend.text = element_text(size = 12, face = "bold", color = "black"),
+      legend.spacing.x = unit(0.2, "cm"),
+      axis.text = element_text(size = 14, face = "bold", color = "black"),
+      axis.title = element_text(size = 16, face = "bold", color = "black"),
+      axis.title.x = element_text(margin = margin(t = 20)),
+      axis.title.y = element_text(margin = margin(r = 20))
+    )
+
+  return(p)
+}
+
+# Použití funkce pro existující dataframe df
+p <- create_student_plot(df)
+
+if (!dir.exists("grafy")) {
+  dir.create("grafy")
+}
+graf_filename <- file.path("grafy", paste0(df$ID, "_graf.png"))
+# Uložení grafu do souboru
+ggsave(graf_filename, p, width = 8, height = 6, dpi = 300)
+
+generate_percentile_text <- function(percentile_category) {
+  case_when(
+    percentile_category == 1 ~ "\\textbf{VAŠE DÍTĚ SE CELKOVĚ UMÍSTILO POD 25. PERCENTILEM}, což znamená, že jeho výsledky jsou pod průměrem ve srovnání se spolužáky. To naznačuje potřebu zaměřit se na rozvoj základních pohybových dovedností, jako je koordinace, rovnováha a síla, které posílí jeho fyzickou zdatnost a sebevědomí v pohybu.",
+    percentile_category == 2 ~ "\\textbf{VAŠE DÍTĚ SE CELKOVĚ UMÍSTILO MEZI 25. a 50. PERCENTILEM}, což znamená, že jeho výsledky jsou mírně pod průměrem ve srovnání se spolužáky. Tento výsledek naznačuje, že je vhodné se zaměřit na posílení celkové pohybové gramotnosti, zejména v oblasti rozvoje motorických dovedností a porozumění pohybu, což umožní lepší využívání pohybu v různých situacích.",
+    percentile_category == 3 ~ "\\textbf{VAŠE DÍTĚ SE CELKOVĚ UMÍSTILO MEZI 50. A 75. PERCENTILEM}, což znamená, že jeho výsledky jsou mírně nad průměrem ve srovnání se spolužáky. To naznačuje solidní základ, na kterém je možné dále stavět – například prostřednictvím pravidelných pohybových aktivit, které mohou posílit všechny tyto oblasti.",
+    percentile_category == 4 ~ "\\textbf{VAŠE DÍTĚ SE CELKOVĚ UMÍSTILO NAD 75. PERCENTILEM}, což znamená, že jeho výsledky jsou výrazně nad průměrem, ve srovnání se spolužáky. Tento výsledek ukazuje na velmi silný základ v pohybové gramotnosti, který je možné ještě dále rozvíjet prostřednictvím náročnějších pohybových aktivit, které podporují růst ve všech těchto oblastech.",
+    TRUE ~ "Chyba: Neplatná hodnota percentilu."
+  )
+}
+
+
+dir.create("texty", showWarnings = FALSE)
+
+# Generování unikátního názvu souboru na základě ID a jména probanda
+percentile_filename <- paste0("texty/percentile_text_", df$ID[1], "_", df$Name[1], ".tex")
+
+# Vygenerování odpovídajícího textu
+percentile_category <- df$PL_overall[1]
+percentile_text <- generate_percentile_text(percentile_category)
+
+# Uložení do LaTeX souboru
+writeLines(percentile_text, percentile_filename)
+```
+
+\begin{minipage}{0.5\textwidth}
+Pohybová gramotnost zahrnuje schopnost nejen se pohybovat, ale také chápat a efektivně využívat pohybové dovednosti v různých situacích. Hodnotili jsme čtyři oblasti: fyzickou, psychologickou, sociální a kognitivní. \input{`r percentile_filename`}
+\end{minipage}
+\begin{minipage}{0.5\textwidth}
+\includegraphics[width=\linewidth]{`r graf_filename`}
+\end{minipage}
+\colorbox{headerbg}{\parbox{\textwidth}{\raggedright \textcolor{headertext}{\Large \textbf{Motivace ke cvičení (AFFEXX-KIDS-CZ)}}}}
+
+```{r results='asis', echo=FALSE}
+library(dplyr)
+motivace <- df$AFFEXX_overall_report[1] 
+
+# evaluace <- ifelse(motivace == 1, "NÍZKÁ MOTIVACE",
+#             ifelse(motivace == 2, "STŘEDNÍ MOTIVACE",
+#                    "VYSOKÁ MOTIVACE"))
+
+popis <- case_when(
+  motivace == 1 ~ "Dítě cvičení nemá rádo, cítí se při něm nepříjemně a nemá zájem se do něj zapojovat.",
+  motivace == 2 ~ "Dítě má k cvičení spíše negativní vztah, ale občas se do něj zapojí, i když se necítí příliš motivované.",
+  motivace == 3 ~ "Dítě má neutrální postoj ke cvičení, někdy ho baví, jindy ne, jeho zapojení závisí na konkrétní situaci.",
+  motivace == 4 ~ "Dítě má k cvičení pozitivní vztah, většinou se do něj zapojuje s chutí a těší se na pohybové aktivity.",
+  motivace == 5 ~ "Dítě miluje cvičení, je nadšené a motivované, aktivně vyhledává možnosti, jak se zapojit do pohybové aktivity.",
+  TRUE ~ "Hodnota není platná."  # Ochrana pro neplatné vstupy
+)
+
+
+```
+
+Dotazník AFFEXX-KIDS-CZ zkoumá, jak se děti cítí během cvičení a zda je pro ně příjemné či nikoliv. Zjišťuje také, jak dřívější zkušenosti ovlivňují pocity a představy o cvičení. Celkový výsledek dotazníku je hodnocen na škále 1 až 5. Přičemž 1 znamená nechuť ke cvičení, nezájem. Číslo 5 znamená nadšení, vysokou motivaci ke cvičení.  \vspace{-0.5cm}
+\begin{center}
+\parbox{0.8\textwidth}{\centering
+\textbf{{VÝSLEDEK VAŠEHO DÍTĚTE JE `r motivace`.}}}
+\newline
+`r popis`
+\end{center}
+\vspace{-0.3cm}
+\colorbox{headerbg}{\parbox{\textwidth}{\raggedright \textcolor{headertext}{\Large \textbf{Kognice}}}}
+
+Test kognice se skládá ze 3 následujících částí, u nichž jsou uvedeny výsledky (průměr značí o dostatečné úrovni v dané oblasti):
+
+```{r results='asis'}
+library(knitr)
+
+# Extrahování hodnot z prvního řádku dataframe df
+cog_t14 <- df$COG_T14[1]
+cog_t16 <- df$COG_T16[1]
+cog_t17 <- df$COG_T17[1]
+
+get_score_category <- function(score) {
+  if (score > 121) {
+    return(c("green", "≤121", "Nadprůměr"))
+  } else if (score >= 90) {
+    return(c("lime", "120–90", "Průměr"))
+  } else {
+    return(c("red", "≥89", "Podprůměr"))
+  }
+}
+
+# Získání hodnot pro jednotlivé testy
+score1 <- get_score_category(cog_t14)
+score2 <- get_score_category(cog_t16)
+score3 <- get_score_category(cog_t17)
+
+# Generování LaTeX tabulky s dynamickými barvami a popisky
+cat(paste0("
+\\begin{table}[h]
+\\centering
+\\renewcommand{\\arraystretch}{1.4} % Zvýší výšku řádků pro lepší čitelnost
+\\begin{tabular}{>{\\centering\\arraybackslash}p{3cm} p{12cm}} % První sloupec centrovaný, druhý bez hranic
+\\hline
+\\cellcolor{", score1[1], "} \\multirow{3}{=}{\\centering \\textbf{", score1[2], "} \\\\ \\textbf{", score1[3], "}} & 
+1. Test rozpoznávání obrázků, zaměřený na vizuální podněty spojené s pracovní pamětí, kdy participant má za úkol rozpoznat sadu obrázků, které mu byly předem předloženy, v poli s rušivými obrázky: \\textbf{", cog_t14, "~dosažených bodů}. \\\\
+\\hline
+\\cellcolor{", score2[1], "} \\multirow{1.9}{=}{\\centering \\textbf{", score2[2], "} \\\\ \\textbf{", score2[3], "}} & 
+2. Test řazení názvů a čísel zaměřený na pracovní paměť a pozornost (poslechové cvičení): \\textbf{", cog_t16, "~dosažených bodů}. \\\\
+\\hline
+\\cellcolor{", score3[1], "} \\multirow{1.9}{=}{\\centering \\textbf{", score3[2], "} \\\\ \\textbf{", score3[3], "}} & 
+3. Vyhledávání dvojic testující pozornost a exekutivní funkce, kdy participant hledá v pracovním listu dvojici míč-pes: \\textbf{", cog_t17, "~dosažených bodů}. \\\\
+\\hline
+\\end{tabular}
+\\end{table}
+"))
+```
+
+\newpage
+\vspace{-0.3cm}
+\colorbox{headerbg}{\parbox{\textwidth}{\raggedright \textcolor{headertext}{\Large \textbf{Camsa (aktuální motorické kompetence)}}}}
+
+```{r results='asis', echo=FALSE}
+library(knitr)
+library(dplyr)
+
+
+# Vyber odpovídající score a quality podle lepšího trialu
+camsa_time<- ifelse(df$Trial1_time_s <= df$Trial2_time_s, df$Trial1_timescore, df$Trial2_timescore)
+camsa_quality <- ifelse(df$Trial1_time_s <= df$Trial2_time_s, df$Trial1_quality, df$Trial2_quality)
+camsa_allscore <- ifelse(df$Trial1_time_s <= df$Trial2_time_s, df$Trial1_allscore, df$Trial2_allscore)
+
+df$Age_forCAMSAdatetesting <- floor(df$Age_forCAMSAdatetesting)
+
+# Výpočet CAMSA hodnoty s celými čísly pro věk
+camsa_hodnota <- with(df, case_when(
+    # Ženy (F)
+    `Sex_(F/M)` == "F" & Age_forCAMSAdatetesting == 8 & camsa_allscore < 15 ~ 1,
+    `Sex_(F/M)` == "F" & Age_forCAMSAdatetesting == 8 & camsa_allscore >= 15 & camsa_allscore <= 20 ~ 2,
+    `Sex_(F/M)` == "F" & Age_forCAMSAdatetesting == 8 & camsa_allscore == 21 ~ 3,
+    `Sex_(F/M)` == "F" & Age_forCAMSAdatetesting == 8 & camsa_allscore > 21 ~ 4,
+    
+    `Sex_(F/M)` == "F" & Age_forCAMSAdatetesting == 9 & camsa_allscore < 16 ~ 1,
+    `Sex_(F/M)` == "F" & Age_forCAMSAdatetesting == 9 & camsa_allscore >= 16 & camsa_allscore <= 21 ~ 2,
+    `Sex_(F/M)` == "F" & Age_forCAMSAdatetesting == 9 & camsa_allscore == 22 ~ 3,
+    `Sex_(F/M)` == "F" & Age_forCAMSAdatetesting == 9 & camsa_allscore > 22 ~ 4,
+    
+    `Sex_(F/M)` == "F" & Age_forCAMSAdatetesting == 10 & camsa_allscore < 17 ~ 1,
+    `Sex_(F/M)` == "F" & Age_forCAMSAdatetesting == 10 & camsa_allscore >= 17 & camsa_allscore <= 22 ~ 2,
+    `Sex_(F/M)` == "F" & Age_forCAMSAdatetesting == 10 & camsa_allscore == 23 ~ 3,
+    `Sex_(F/M)` == "F" & Age_forCAMSAdatetesting == 10 & camsa_allscore > 23 ~ 4,
+    
+    `Sex_(F/M)` == "F" & Age_forCAMSAdatetesting == 11 & camsa_allscore < 17 ~ 1,
+    `Sex_(F/M)` == "F" & Age_forCAMSAdatetesting == 11 & camsa_allscore >= 17 & camsa_allscore <= 22 ~ 2,
+    `Sex_(F/M)` == "F" & Age_forCAMSAdatetesting == 11 & camsa_allscore == 23 & camsa_allscore <= 24 ~ 3,
+    `Sex_(F/M)` == "F" & Age_forCAMSAdatetesting == 11 & camsa_allscore > 24 ~ 4,
+    
+    `Sex_(F/M)` == "F" & Age_forCAMSAdatetesting == 12 & camsa_allscore < 18 ~ 1,
+    `Sex_(F/M)` == "F" & Age_forCAMSAdatetesting == 12 & camsa_allscore >= 18 & camsa_allscore <= 23 ~ 2,
+    `Sex_(F/M)` == "F" & Age_forCAMSAdatetesting == 12 & camsa_allscore == 24 & camsa_allscore <= 25 ~ 3,
+    `Sex_(F/M)` == "F" & Age_forCAMSAdatetesting == 12 & camsa_allscore > 25 ~ 4,
+
+    # Muži (M)
+    `Sex_(F/M)` == "M" & Age_forCAMSAdatetesting == 8 & camsa_allscore < 16 ~ 1,
+    `Sex_(F/M)` == "M" & Age_forCAMSAdatetesting == 8 & camsa_allscore >= 16 & camsa_allscore <= 21 ~ 2,
+    `Sex_(F/M)` == "M" & Age_forCAMSAdatetesting == 8 & camsa_allscore >= 22 & camsa_allscore <= 23 ~ 3,
+    `Sex_(F/M)` == "M" & Age_forCAMSAdatetesting == 8 & camsa_allscore > 23 ~ 4,
+    
+    `Sex_(F/M)` == "M" & Age_forCAMSAdatetesting == 9 & camsa_allscore < 17 ~ 1,
+    `Sex_(F/M)` == "M" & Age_forCAMSAdatetesting == 9 & camsa_allscore >= 17 & camsa_allscore <= 22 ~ 2,
+    `Sex_(F/M)` == "M" & Age_forCAMSAdatetesting == 9 & camsa_allscore == 23 ~ 3,
+    `Sex_(F/M)` == "M" & Age_forCAMSAdatetesting == 9 & camsa_allscore > 23 ~ 4,
+    
+    `Sex_(F/M)` == "M" & Age_forCAMSAdatetesting == 10 & camsa_allscore < 17 ~ 1,
+    `Sex_(F/M)` == "M" & Age_forCAMSAdatetesting == 10 & camsa_allscore >= 17 & camsa_allscore <= 22 ~ 2,
+    `Sex_(F/M)` == "M" & Age_forCAMSAdatetesting == 10 & camsa_allscore >= 23 & camsa_allscore <= 24 ~ 3,
+    `Sex_(F/M)` == "M" & Age_forCAMSAdatetesting == 10 & camsa_allscore > 24 ~ 4,
+    
+    `Sex_(F/M)` == "M" & Age_forCAMSAdatetesting == 11 & camsa_allscore < 18 ~ 1,
+    `Sex_(F/M)` == "M" & Age_forCAMSAdatetesting == 11 & camsa_allscore >= 18 & camsa_allscore <= 23 ~ 2,
+    `Sex_(F/M)` == "M" & Age_forCAMSAdatetesting == 11 & camsa_allscore >= 24 & camsa_allscore <= 25 ~ 3,
+    `Sex_(F/M)` == "M" & Age_forCAMSAdatetesting == 11 & camsa_allscore > 25 ~ 4,
+    
+    `Sex_(F/M)` == "M" & Age_forCAMSAdatetesting == 12 & camsa_allscore < 18 ~ 1,
+    `Sex_(F/M)` == "M" & Age_forCAMSAdatetesting == 12 & camsa_allscore >= 18 & camsa_allscore <= 24 ~ 2,
+    `Sex_(F/M)` == "M" & Age_forCAMSAdatetesting == 12 & camsa_allscore >= 25 & camsa_allscore <= 26 ~ 3,
+    `Sex_(F/M)` == "M" & Age_forCAMSAdatetesting == 12 & camsa_allscore > 26 ~ 4,
+
+    # Pokud neodpovídá žádné podmínce, bude NA
+    TRUE ~ NA_real_
+  ))
+```
+
+Jedná se o pohybový test, který ověřuje koordinaci, šikovnost, rychlost a kvalitu provedení dovedností dítěte v krátké “opičí dráze”, která se skládá ze 7 úkolů v kruhových stanovištích. Sledujeme čas, za který dítě zvládne provést všech 7 dovedností. Druhým pozorovaným aspektem je kvalita provedení jednotlivých dovedností. \vspace{-0.6cm}
+
+\begin{center}
+• Čas: \textbf{`r camsa_time` sekund} \quad 
+• Kvalita provedení: \textbf{`r camsa_quality` bodů (ze 14)} \quad 
+• Celkové skóre: \textbf{`r camsa_allscore` bodů (z 28)}
+\end{center}
+\begin{center}
+\vspace{-0.3cm}
+Slovní ohodnocení (označené tučně a velkými písmeny)
+\end{center}
+\vspace{-0.8cm}
+
+```{r, results='asis', echo=FALSE}
+# Původní tabulka (neměnný obsah)
+tabulka <- data.frame(
+  Sloupec1 = "Začátečník",
+  Sloupec2 = "Mírně pokročilý",
+  Sloupec3 = "Pokročilý",
+  Sloupec4 = "Vynikající"
+)
+
+# Zvýraznění odpovídající hodnoty podle `df$hodnota`
+tabulka <- tabulka %>%
+  mutate(
+    Sloupec1 = ifelse(camsa_hodnota == 1, "\\textbf{\\MakeUppercase{Začátečník}}", Sloupec1),
+    Sloupec2 = ifelse(camsa_hodnota == 2, "\\textbf{\\MakeUppercase{Mírně pokročilý}}", Sloupec2),
+    Sloupec3 = ifelse(camsa_hodnota == 3, "\\textbf{\\MakeUppercase{Pokročilý}}", Sloupec3),
+    Sloupec4 = ifelse(camsa_hodnota == 4, "\\textbf{\\MakeUppercase{Vynikající}}", Sloupec4)
+  )
+# Generování tabulky pro PDF (LaTeX)
+cat("
+\\begin{table}[!h]
+\\centering
+", sep = "\n")
+
+# Generování tabulky pro PDF (LaTeX)
+kable(tabulka, format = "latex", booktabs = TRUE, col.names = NULL, escape = FALSE)
+
+cat("
+\\end{table}
+")
+
+```
+
+\vspace{-0.3cm}
+\colorbox{headerbg}{\parbox{\textwidth}{\raggedright \textcolor{headertext}{\Large \textbf{Pictorials (vnímané motorické kompetence)}}}}
+
+Jedná se o dotazník, který slouží k posouzení toho, jak dítě vnímá své schopnosti při provádění konkrétní dovednosti. V dotazníku se nachází 22 dovedností a dítě vybírá ze 4 možností dle toho, jak se cítí, že danou sportovní činnost ovládá (1. Jsem v tom špatný/á, 2. Jsem v tom docela dobrý/á, 3. Jsem v tom dobrý/á, 4. Jsem v tom nejlepší). Součet skóre nám ukazuje, jak moc je Vaše dítě sebevědomé a jak si věří v oblasti sportovních dovedností.
+
+```{r, results='asis'}
+score <- df$Pictorial_allscore[1]
+evaluation <- df$Pictorial_evalu[1]
+
+# Vytvoření hodnocení s tučněním pouze odpovídající hodnoty
+evaluation_text <- paste0(
+  ifelse(evaluation == "Průměrně sebevědomé", "\\textbf{\\uppercase{PRŮMĚRNĚ}}", "Průměrně"), " / ",
+  ifelse(evaluation == "Málo sebevědomé", "\\textbf{\\uppercase{MÁLO}}", "Málo"), " / ",
+  ifelse(evaluation == "Velmi sebevědomé", "\\textbf{\\uppercase{VELMI}}", "Velmi"), " sebevědomé"
+)
+
+# Výstup v LaTeX formátu
+cat(paste0("
+\\vspace{-0.3cm}
+\\begin{center}
+• Skóre: \\textbf{", score, " bodů (z 88)} \\quad • Celkové hodnocení: ", evaluation_text, "
+\\end{center}
+"))
+```
+
+\vspace{-0.3cm}
+\colorbox{headerbg}{\parbox{\textwidth}{\raggedright \textcolor{headertext}{\Large \textbf{Kardiorespirační zdatnost: Člunkový běh na 20 m (beep test)}}}}
+
+Jedná se o test zjišťující kardiorespirační zdatnost dítěte, která je důležitá pro mnoho klíčových aspektů zdraví.
+
+```{r, results='asis'}
+df_girls <- data.frame(
+  Age = c(8, 9, 10, 11, 12),
+  podprůměr = c(14, 19, 20, 21, 23),
+  průměr_min = c(15, 20, 21, 22, 24),
+  průměr_max = c(31, 45, 47, 51, 57),
+  nadprůměr = c(32, 46, 48, 52, 58)
+)
+
+# Vytvoření tabulky pro kluky
+df_boys <- data.frame(
+  Age = c(8, 9, 10, 11, 12),
+  podprůměr = c(16, 21, 23, 24, 26),
+  průměr_min = c(17, 22, 24, 25, 27),
+  průměr_max = c(35, 50, 53, 57, 63),
+  nadprůměr = c(36, 51, 54, 58, 64)
+)
+
+if (df$`Sex_(F/M)`[1] == "F") {
+  norm_table <- df_girls
+} else {
+  norm_table <- df_boys
+}
+
+# Výběr příslušného řádku na základě věku
+age_row <- norm_table[norm_table$Age == floor(df$Age_forCAMSAdatetesting), ]
+
+# Určení hodnocení podle Beeptest_level
+beep_result <- case_when(
+  df$Beeptest_totalshuttle[1] <= age_row$podprůměr ~ "Podprůměrný",
+  df$Beeptest_totalshuttle[1] >= age_row$průměr_min & df$Beeptest_totalshuttle[1] <= age_row$průměr_max ~ "Průměrný",
+  df$Beeptest_totalshuttle[1] >= age_row$nadprůměr ~ "Nadprůměrný"
+)
+
+# Výstup pro LaTeX s tučným zvýrazněním pouze vybraného výsledku
+cat(paste0("
+\\begin{center}
+\\vspace{-0.3cm}
+• Celkové skóre: \\textbf{", df$Beeptest_totalshuttle[1], " úseků} \\quad • Celkové hodnocení: ",
+ifelse(beep_result == "Podprůměrný", "\\textbf{\\uppercase{PODPRŮMĚRNÝ}}", "Podprůměrný"), " / ",
+ifelse(beep_result == "Průměrný", "\\textbf{\\uppercase{PRŮMĚRNÝ}}", "Průměrný"), " / ",
+ifelse(beep_result == "Nadprůměrný", "\\textbf{\\uppercase{NADPRŮMĚRNÝ}}", "Nadprůměrný"),
+" výsledek
+\\end{center}"))
+```
+
+\vspace{-0.3cm}
+\colorbox{headerbg}{\parbox{\textwidth}{\raggedright \textcolor{headertext}{\Large \textbf{Pohybová aktivita (aktigraf)}}}}
+
+**POHYBOVÁ AKTIVITA (PA)** = Pomocí aktigrafu (pásek s krabičkou) jsme po dobu 7 dnů zaznamenávali pohybovou aktivitu Vašeho dítěte. Pravidelný pohyb hraje klíčovou roli v životě každého člověka, neboť přináší významné zdravotní i psychické přínosy. Světová zdravotnická organizace doporučuje, aby děti školního věku měly každý den alespoň 60 minut pohybové aktivity střední až vysoké intenzity. Na základě tohoto doporučení jsme vyhodnotili, zda se Vaše dítě pohybuje dostatečně. \vspace{-0.3cm}
+
+\begin{center}
+Hodnoty Vašeho dítěte (průměrné hodnoty v minutách za den):
+\end{center}
+\vspace{-0.8cm}
+
+```{r, results='asis'}
+cat(paste0("
+\\begin{table}[h]
+\\centering
+\\renewcommand{\\arraystretch}{1.4} % Zvýší výšku řádků pro lepší čitelnost
+\\begin{tabular}{ccc} % Bez svislých čar
+\\hline
+Nízká intenzita PA (př. chůze) & Střední až vysoká intenzita PA (př. běh) & Celkové hodnocení PA \\\\
+\\hline
+\\textbf{", round(df$LPA_per_day_min[1], 1), " minut za den} & 
+\\textbf{", round(df$MVPA_per_day_min[1], 1), " minut za den} & 
+\\textbf{", df$PA_evalu[1], "} \\\\
+\\hline
+\\end{tabular}
+\\end{table}
+"))
+```
+
+\vspace{-0.3cm}
+\colorbox{headerbg}{\parbox{\textwidth}{\raggedright \textcolor{headertext}{\Large \textbf{Tělesné složení}}}}
+
+```{r, results='asis'}
+cat(paste0("
+\\begin{table}[h]
+\\centering
+\\renewcommand{\\arraystretch}{1.4} % Zvýší výšku řádků pro lepší čitelnost
+\\begin{tabular}{lcc} % Bez svislých čar
+\\hline
+Hodnocené parametry & Hodnoty Vašeho dítěte & Hodnocení \\\\
+\\hline
+Tělesná výška (cm) & \\textbf{", sprintf("%.1f", df$Height_cm[1]), "} & Nehodnotí se \\\\
+Tělesná hmotnost (kg) & \\textbf{", sprintf("%.1f", df$Weight_kg[1]), "} & Nehodnotí se \\\\
+Tuk v těle (\\%) & \\textbf{", sprintf("%.1f", df$`Fat%`[1]), "} & \\textbf{", df$Fat_evalu[1], "} \\\\
+Aktivní svalová hmota (\\%) & \\textbf{", sprintf("%.1f", df$`ATH_%`[1]), "} & \\textbf{", df$ATH_evalu[1], "} \\\\
+Celková voda v těle (\\%) & \\textbf{", sprintf("%.1f", df$`Water_%`[1]), "} & \\textbf{", df$Water_evalu[1], "} \\\\
+\\hline
+\\end{tabular}
+\\end{table}
+"))
+```
