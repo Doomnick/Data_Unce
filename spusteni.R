@@ -181,7 +181,7 @@ generate_report <- function(row) {
   return(result)
 }
 
-handlers("txt")  # Zajistí výpis do klasické konzole (Rscript, CMD, .bat)
+handlers(handler_txtprogressbar())   # Zajistí výpis do klasické konzole (Rscript, CMD, .bat)
 
 with_progress({
   p <- progressor(along = 1:nrow(valid_data))
