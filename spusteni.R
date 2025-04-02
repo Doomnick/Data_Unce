@@ -181,15 +181,24 @@ generate_report <- function(row) {
   return(result)
 }
 
-cat("⏳ Spouštím generování reportů...\n")
+cat("⏳ Generování reportů spuštěno...\n")
 
-results <- lapply(1:nrow(valid_data), function(i) {
-  df <- valid_data[i, ]
-  cat(paste0("[", i, "/", nrow(valid_data), "] Generuji: ", df$ID, " - ", df$Name, "\n"))
-  flush.console()
+# Spustí "tikání" do konzole
+tick <- TRUE
+ticker <- parallel::mcparallel({
+  while (tick) {
+    cat(".")
+    flush.console()
+    Sys.sleep(2)
+  }
+})
+
+results <- future_lapply(1:nrow(valid_data), function(i) {
   generate_report(i)
 })
 
+tick <- FALSE
+parallel::mccollect(ticker)
 cat("\n✅ Generování dokončeno.\n")
 
 
