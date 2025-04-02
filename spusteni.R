@@ -181,16 +181,14 @@ generate_report <- function(row) {
   return(result)
 }
 
-handlers(handler_txtprogressbar())   # Zajistí výpis do klasické konzole (Rscript, CMD, .bat)
-
-with_progress({
-  p <- progressor(along = 1:nrow(valid_data))
-  results <- future_lapply(1:nrow(valid_data), function(i) {
-    df <- valid_data[i, ]
-    p(message = paste0("📝 Zpracovávám: ", df$ID, " - ", df$Name))
-    generate_report(i)
-  })
+results <- future_lapply(1:nrow(valid_data), function(i) {
+  df <- valid_data[i, ]
+  generate_report(i)
 })
+
+assign("done", TRUE, envir = .GlobalEnv)
+value(spinner)  # počká, až vlákno skončí
+cat("\n✅ Generování dokončeno.\n")
 
 # Roztřídění výsledků
 completed_reports <- Filter(function(x) x$status == "success", results)
