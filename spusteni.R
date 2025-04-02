@@ -1,11 +1,10 @@
 suppressWarnings(library(pacman))
 suppressWarnings(library(rstudioapi))
 library(tcltk)
-suppressPackageStartupMessages(
-  suppressWarnings(
-    library(lubridate)
-  )
-)
+suppressPackageStartupMessages(suppressWarnings(library(lubridate)))
+suppressPackageStartupMessages(suppressWarnings(library(progressr)))
+
+
 rm(list = ls())
 pacman::p_load(readxl, dplyr, stringr, parallel, future.apply, rmarkdown, readr)
 
@@ -181,16 +180,14 @@ generate_report <- function(row) {
   
   return(result)
 }
-library(progressr)
-handlers(global = TRUE)  # Aktivuje výchozí vizualizaci průběhu (v RStudio funguje skvěle)
 
-# Spuštění paralelního generování s progressem
+handlers("txt")  # Zajistí výpis do klasické konzole (Rscript, CMD, .bat)
+
 with_progress({
-  p <- progressor(along = 1:nrow(valid_data))  # připraví progress bar
-  
+  p <- progressor(along = 1:nrow(valid_data))
   results <- future_lapply(1:nrow(valid_data), function(i) {
     df <- valid_data[i, ]
-    p(message = paste0("📝 ", df$ID, " - ", df$Name))
+    p(message = paste0("📝 Zpracovávám: ", df$ID, " - ", df$Name))
     generate_report(i)
   })
 })
