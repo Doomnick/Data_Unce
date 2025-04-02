@@ -183,22 +183,23 @@ generate_report <- function(row) {
 
 cat("⏳ Generování reportů spuštěno...\n")
 
-# Spustí "tikání" do konzole
-tick <- TRUE
-ticker <- parallel::mcparallel({
-  while (tick) {
-    cat(".")
-    flush.console()
-    Sys.sleep(2)
-  }
+# Zahájíme paralelní zpracování reportů ve future
+gen_future <- future::future({
+  future_lapply(1:nrow(valid_data), function(i) {
+    generate_report(i)
+  })
 })
 
-results <- future_lapply(1:nrow(valid_data), function(i) {
-  generate_report(i)
-})
+# Mezitím tiskneme tečky jako indikátor běhu
+while (!future::resolved(gen_future)) {
+  cat(".")
+  flush.console()
+  Sys.sleep(2)
+}
 
-tick <- FALSE
-parallel::mccollect(ticker)
+# Až vše hotovo, získáme výsledky a vypíšeme info
+results <- future::value(gen_future)
+
 cat("\n✅ Generování dokončeno.\n")
 
 
