@@ -181,14 +181,17 @@ generate_report <- function(row) {
   return(result)
 }
 
-results <- future_lapply(1:nrow(valid_data), function(i) {
+cat("⏳ Spouštím generování reportů...\n")
+
+results <- lapply(1:nrow(valid_data), function(i) {
   df <- valid_data[i, ]
+  cat(paste0("[", i, "/", nrow(valid_data), "] Generuji: ", df$ID, " - ", df$Name, "\n"))
+  flush.console()
   generate_report(i)
 })
 
-assign("done", TRUE, envir = .GlobalEnv)
-value(spinner)  # počká, až vlákno skončí
 cat("\n✅ Generování dokončeno.\n")
+
 
 # Roztřídění výsledků
 completed_reports <- Filter(function(x) x$status == "success", results)
