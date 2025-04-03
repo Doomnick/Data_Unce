@@ -29,7 +29,7 @@ tcl("wm", "attributes", invisible_root, topmost = TRUE)
 # Výběr souboru (okno bude mít prioritu)
 selected_file <- tclvalue(tkgetOpenFile(
   title = "Vyberte soubor s daty (data.xlsx)",
-  initialdir = script_dir,
+  initialdir = dirname(script_dir),
   filetypes = "{{Excel Files} {.xlsx}} {{All files} *}",
   parent = invisible_root
 ))
