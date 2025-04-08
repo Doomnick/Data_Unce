@@ -1,15 +1,20 @@
-main_lib <- .libPaths()[1]
-print(main_lib)
-if (!dir.exists(main_lib)) dir.create(main_lib, recursive = TRUE)
-.libPaths(main_lib)
+# Získej uživatelskou knihovnu
+user_lib <- Sys.getenv("R_LIBS_USER")
+cat("Using user library path:", user_lib, "\n")
 
-# Seznam balíčků
+# Pokud neexistuje, vytvoř ji
+if (!dir.exists(user_lib)) dir.create(user_lib, recursive = TRUE)
+
+# Nastav jako hlavní knihovnu pro instalaci
+.libPaths(user_lib)
+
+# Seznam balíčků k instalaci
 packages <- c(
   "jsonlite", "httr", "fs", "rstudioapi", "ggplot2", "tidyverse",
   "officer", "dplyr", "knitr", "tcltk", "lubridate", "progressr", "pacman", "tinytex"
 )
 
-# Instalace chybějících balíčků
+# Instaluj chybějící
 missing <- setdiff(packages, rownames(installed.packages()))
 if (length(missing) > 0) {
   install.packages(missing, dependencies = TRUE)
