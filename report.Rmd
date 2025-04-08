@@ -78,6 +78,9 @@ Níže Vám posíláme výsledky Vašeho dítěte v oblastech pohybové gramotno
 library(ggplot2)
 library(tidyverse)
 library(officer)
+library(dplyr)
+library(knitr)
+
 # Funkce pro převod kategorií percentilů na číselné hodnoty
 convert_percentile <- function(x) {
   case_when(
@@ -212,7 +215,6 @@ Pohybová gramotnost zahrnuje schopnost nejen se pohybovat, ale také chápat a 
 \colorbox{headerbg}{\parbox{\textwidth}{\raggedright \textcolor{headertext}{\Large \textbf{Motivace ke cvičení (AFFEXX-KIDS-CZ)}}}}
 
 ```{r results='asis', echo=FALSE}
-library(dplyr)
 motivace <- df$AFFEXX_overall_report[1] 
 
 # evaluace <- ifelse(motivace == 1, "NÍZKÁ MOTIVACE",
@@ -231,7 +233,7 @@ popis <- case_when(
 
 ```
 
-Dotazník AFFEXX-KIDS-CZ zkoumá, jak se děti cítí během cvičení a zda je pro ně příjemné či nikoliv. Zjišťuje také, jak dřívější zkušenosti ovlivňují pocity a představy o cvičení. Celkový výsledek dotazníku je hodnocen na škále 1 až 5. Přičemž 1 znamená nechuť ke cvičení, nezájem. Číslo 5 znamená nadšení, vysokou motivaci ke cvičení.  \vspace{-0.5cm}
+Dotazník AFFEXX-KIDS-CZ zkoumá, jak se dítě cítí během cvičení a zda je pro něj příjemné či nikoliv. Zjišťuje také, jak dřívější zkušenosti ovlivňují pocity a představy o cvičení. Celkový výsledek dotazníku je hodnocen na škále 1 až 5. Přičemž 1 znamená nechuť ke cvičení, nezájem. Číslo 5 znamená nadšení, vysokou motivaci ke cvičení.  \vspace{-0.5cm}
 \begin{center}
 \parbox{0.8\textwidth}{\centering
 \textbf{{VÝSLEDEK VAŠEHO DÍTĚTE JE `r motivace`.}}}
@@ -244,7 +246,6 @@ Dotazník AFFEXX-KIDS-CZ zkoumá, jak se děti cítí během cvičení a zda je 
 Test kognice se skládá ze 3 následujících částí, u nichž jsou uvedeny výsledky (průměr značí o dostatečné úrovni v dané oblasti):
 
 ```{r results='asis'}
-library(knitr)
 
 # Extrahování hodnot z prvního řádku dataframe df
 cog_t14 <- df$COG_T14[1]
@@ -292,9 +293,6 @@ cat(paste0("
 \colorbox{headerbg}{\parbox{\textwidth}{\raggedright \textcolor{headertext}{\Large \textbf{Camsa (aktuální motorické kompetence)}}}}
 
 ```{r results='asis', echo=FALSE}
-library(knitr)
-library(dplyr)
-
 
 # Vyber odpovídající score a quality podle lepšího trialu
 camsa_time<- ifelse(df$Trial1_time_s <= df$Trial2_time_s, df$Trial1_timescore, df$Trial2_timescore)
