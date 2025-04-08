@@ -1,4 +1,5 @@
 main_lib <- .libPaths()[1]
+print(main_lib)
 if (!dir.exists(main_lib)) dir.create(main_lib, recursive = TRUE)
 .libPaths(main_lib)
 
