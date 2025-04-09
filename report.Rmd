@@ -258,7 +258,7 @@ get_score_category <- function(score) {
   } else if (score >= 90) {
     return(c("lime", "120–90", "Průměr"))
   } else {
-    return(c("red", "≥89", "Podprůměr"))
+    return(c("red", "≤89", "Podprůměr"))
   }
 }
 
