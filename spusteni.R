@@ -1,3 +1,18 @@
+# Funkce pro kontrolu a instalaci knihoven
+install_if_needed <- function(package_name) {
+  if (!requireNamespace(package_name, quietly = TRUE)) {
+    install.packages(package_name, repos = "https://cran.rstudio.com/")
+  }
+}
+
+# Seznam knihoven, které chceme zkontrolovat a případně nainstalovat
+packages <- c("rmarkdown", "pandoc","pacman", "rstudioapi", "tcltk", "lubridate", "progressr", "bookdown", "ggplot2", "tidyverse", "officer", "tinytex", "dplyr", "knitr")
+
+# Instalace knihoven, pokud nejsou nainstalovány
+lapply(packages, install_if_needed)
+
+
+
 suppressWarnings(library(pacman))
 suppressWarnings(library(rstudioapi))
 library(tcltk)
@@ -146,7 +161,7 @@ generate_report <- function(row) {
   
   # Finální název souboru (bez čísla procesu)
   final_output_file <- file.path(output_dir, paste0(df$ID, "_", df$Name, ".pdf"))
-  
+  Sys.setenv(RSTUDIO_PANDOC = "C:/Program Files/RStudio/resources/app/bin/quarto/bin/tools")
   result <- tryCatch({
     rmarkdown::render(
       input = file.path(script_dir, "report.rmd"),

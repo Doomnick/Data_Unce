@@ -1,3 +1,16 @@
+# Funkce pro kontrolu a instalaci knihoven
+install_if_needed <- function(package_name) {
+  if (!requireNamespace(package_name, quietly = TRUE)) {
+    install.packages(package_name, repos = "https://cran.rstudio.com/")
+  }
+}
+
+# Seznam knihoven, které chceme zkontrolovat a případně nainstalovat
+packages <- c("jsonlite", "httr", "fs", "rstudioapi")
+
+# Instalace knihoven, pokud nejsou nainstalovány
+lapply(packages, install_if_needed)
+
 library(jsonlite)
 library(httr)
 library(fs)

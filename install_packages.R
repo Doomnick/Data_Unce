@@ -1,6 +1,7 @@
 # Nastavení CRAN mirroru (nutné pro neinteraktivní režim)
 options(repos = c(CRAN = "https://cloud.r-project.org"))
 
+
 # Získej uživatelskou knihovnu
 user_lib <- Sys.getenv("R_LIBS_USER")
 cat("Using user library path:", user_lib, "\n")
