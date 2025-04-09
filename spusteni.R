@@ -5,25 +5,20 @@ install_if_needed <- function(package_name) {
   }
 }
 
-# Seznam knihoven, které chceme zkontrolovat a případně nainstalovat
-packages <- c("rmarkdown", "pandoc","pacman", "rstudioapi", "tcltk", "lubridate", "progressr", "bookdown", "ggplot2", "tidyverse", "officer", "tinytex", "dplyr", "knitr")
+packages <- c("rmarkdown", "pacman", "rstudioapi", "tcltk", "lubridate", "progressr", "bookdown",
+              "ggplot2", "tidyverse", "officer", "tinytex", "dplyr", "knitr", "shiny", "readxl", "shinyFiles", "later")
 
-# Instalace knihoven, pokud nejsou nainstalovány
 invisible(lapply(packages, install_if_needed))
-
-
 
 suppressWarnings(library(pacman))
 suppressWarnings(library(rstudioapi))
 library(tcltk)
 suppressPackageStartupMessages(suppressWarnings(library(lubridate)))
 suppressPackageStartupMessages(suppressWarnings(library(progressr)))
-
+pacman::p_load(readxl, dplyr, stringr, parallel, future.apply, rmarkdown, readr, shiny, shinyFiles)
 
 rm(list = ls())
-pacman::p_load(readxl, dplyr, stringr, parallel, future.apply, rmarkdown, readr)
 
-#ahoj2
 if (requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
   script_path <- rstudioapi::getActiveDocumentContext()$path
   script_dir <- dirname(script_path)
@@ -31,36 +26,87 @@ if (requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable())
   script_dir <- normalizePath(getwd())
 }
 
-invisible_root <- tktoplevel()
-tkwm.withdraw(invisible_root)  # Skryje okno, ale umožní použít jako parent
-
-# Nastavení okna jako vždy navrchu (topmost)
-tcl("wm", "attributes", invisible_root, topmost = TRUE)
-
-# Výběr souboru (okno bude mít prioritu)
-selected_file <- tclvalue(tkgetOpenFile(
-  title = "Vyberte soubor s daty (data.xlsx)",
-  initialdir = dirname(script_dir),
-  filetypes = "{{Excel Files} {.xlsx}} {{All files} *}",
-  parent = invisible_root
-))
-
-# Zruš parent po výběru
-tkdestroy(invisible_root)
-
-# Pokud nebyl soubor vybrán, ukonči skript
-if (selected_file == "") {
-  stop("❌ Nebyl vybrán žádný vstupní soubor. Ukončuji skript.")
-} else {
-  message("📄 Vybraný soubor s daty: ", selected_file)
+select_file_and_schoolcode <- function() {
+  file_env <- new.env()
+  
+  ui <- fluidPage(
+    titlePanel("Výběr vstupního souboru a kódu školy"),
+    shinyFilesButton("file", "Vyberte soubor s daty (.xlsx)", "Vyberte .xlsx soubor", multiple = FALSE),
+    verbatimTextOutput("filepath"),
+    textInput("school", "Zadejte kód školy:", value = ""),
+    actionButton("ok", "Potvrdit")
+  )
+  
+  server <- function(input, output, session) {
+    volumes <- shinyFiles::getVolumes()()
+    program_slozka <- getwd()
+    volumes <- c("Program Directory" = dirname(program_slozka), volumes)
+    names(volumes) <- gsub(".*\\((.*)\\).*", "\\1", names(volumes))
+    
+    default_root <- "Program Directory"
+    default_path <- basename(program_slozka)
+    
+    shinyFileChoose(
+      input, "file",
+      roots = volumes,
+      filetypes = c("xlsx", "xls"),
+      defaultRoot = default_root,
+      defaultPath = default_path
+    )
+    
+    observeEvent(input$file, {
+      if (!is.null(input$file)) {
+        parsed_path <- parseFilePaths(volumes, input$file)
+        if (nrow(parsed_path) > 0) {
+          file_env$selected_file <- parsed_path$datapath[1]
+          output$filepath <- renderText(file_env$selected_file)
+        }
+      }
+    })
+    
+    observeEvent(input$ok, {
+      if (is.null(file_env$selected_file)) {
+        showModal(modalDialog("❌ Nevybral jste soubor.", easyClose = TRUE))
+      } else if (input$school == "") {
+        showModal(modalDialog("❌ Nezadali jste kód školy.", easyClose = TRUE))
+      } else {
+        file_env$school_code <- input$school
+        file_env$data_dir <- dirname(file_env$selected_file)
+        file_env$output_dir <- file.path(file_env$data_dir, input$school)
+        dir.create(file_env$output_dir, showWarnings = FALSE, recursive = TRUE)
+        
+        # Zobraz hlášku o úspěchu
+        showModal(modalDialog(
+          title = "✅ Hotovo",
+          "Soubor a kód školy byly úspěšně zadány. Generuji reporty...",
+          footer = NULL
+        ))
+        
+        # Počkej chvíli a pak zavři aplikaci
+        later::later(function() {
+          session$sendCustomMessage("closeWindow", list())
+          stopApp()
+        }, delay = 2)  # 2 sekundy
+      }
+    })
+  }
+  
+  runApp(shinyApp(ui, server), launch.browser = TRUE)
+  
+  return(list(
+    datapath = file_env$selected_file,
+    school_code = file_env$school_code,
+    output_dir = file_env$output_dir
+  ))
 }
 
-plan(multisession)  
+file_info <- select_file_and_schoolcode()
+selected_file <- file_info$datapath
+school_code <- file_info$school_code
+output_dir <- file_info$output_dir
 
-# Načtení dat
 data <- read_excel(selected_file)
 
-# Explicitní seznam sloupců použitých v reportu
 required_columns <- c(
   "ID", "Name", "PL_physical", "PL_psychological", "PL_Social", "PL_Cognitive", "PL_overall",
   "AFFEXX_overall_report", "COG_T14", "COG_T16", "COG_T17",
@@ -71,217 +117,69 @@ required_columns <- c(
   "Height_cm", "Weight_kg", "Fat%", "Fat_evalu", "ATH_%", "ATH_evalu", "Water_%", "Water_evalu"
 )
 
-# Kontrola chybějících sloupců
 missing_columns <- setdiff(required_columns, colnames(data))
 if (length(missing_columns) > 0) {
   stop("Chybějící sloupce v datasetu: ", paste(missing_columns, collapse = ", "))
 }
 
-# Zadání kódu školy
-school_code <- tclVar("")
-
-dlg <- tktoplevel()
-tkwm.title(dlg, "Zadejte kód školy")
-
-# Získání rozměrů obrazovky
-screen_width <- as.integer(tkwinfo("screenwidth", dlg))
-screen_height <- as.integer(tkwinfo("screenheight", dlg))
-
-# Nastavení velikosti okna
-win_width <- 300
-win_height <- 120
-
-# Výpočet středu obrazovky
-x_pos <- (screen_width - win_width) %/% 2
-y_pos <- (screen_height - win_height) %/% 2
-
-# Nastavení pozice okna na střed
-tkwm.geometry(dlg, paste0(win_width, "x", win_height, "+", x_pos, "+", y_pos))
-
-# Rám pro centrování obsahu
-frame <- tkframe(dlg)
-tkgrid(frame, row = 0, column = 0)
-tkgrid.columnconfigure(dlg, 0, weight = 1)
-tkgrid.rowconfigure(dlg, 0, weight = 1)
-
-# Nastavení sloupců pro centrování
-tkgrid.columnconfigure(frame, 0, weight = 1)
-tkgrid.columnconfigure(frame, 1, weight = 1)
-
-# Centrovaný textový label
-label <- tklabel(frame, text = "Kód školy:", justify = "center")
-tkgrid(label, row = 0, column = 0, columnspan = 2, pady = 10, sticky = "nsew")
-
-# Centrované vstupní pole
-entry <- tkentry(frame, textvariable = school_code, justify = "center")
-tkgrid(entry, row = 1, column = 0, columnspan = 2, pady = 5, sticky = "ew")
-
-# Centrované tlačítko OK
-ok_button <- tkbutton(frame, text = "OK", command = function() tkdestroy(dlg))
-tkgrid(ok_button, row = 2, column = 0, columnspan = 2, pady = 10, sticky = "ew")
-
-tkwait.window(dlg)  # Čekání na zadání vstupu
-
-# Výsledek
-school_code <- tclvalue(school_code)
-
-# Filtrace probandů podle kódu školy
 filtered_data <- data %>%
-  filter(str_starts(ID, school_code))  
-
-if (nrow(filtered_data) == 0) {
-  stop("Žádní probandi neodpovídají zadanému kódu školy.")
-}
-# Přidání čísla řádku
-filtered_data <- filtered_data %>%
+  filter(str_starts(ID, school_code)) %>%
   mutate(Row_Num = row_number())
 
-# Identifikace nekompletních řádků
 invalid_rows <- filtered_data %>%
   filter(apply(select(., all_of(required_columns)), 1, anyNA)) %>%
   select(ID, Name, Row_Num)
 
-# Filtrace pouze validních řádků
 valid_data <- filtered_data %>%
   filter(!apply(select(., all_of(required_columns)), 1, anyNA))
 
-# Vytvoření složky pro reporty
-data_dir <- dirname(selected_file)
-output_dir <- file.path(data_dir, school_code)
-dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
+plan(multisession)
 
-# Generování reportů paralelně
 generate_report <- function(row) {
-  df <- valid_data[row, ]  
-  
-  # Unikátní název souboru během generování
+  df <- valid_data[row, ]
   temp_output_file <- file.path(output_dir, paste0(df$ID, "_", df$Name, "_", Sys.getpid(), ".pdf"))
-  
-  # Finální název souboru (bez čísla procesu)
   final_output_file <- file.path(output_dir, paste0(df$ID, "_", df$Name, ".pdf"))
   Sys.setenv(RSTUDIO_PANDOC = "C:/Program Files/RStudio/resources/app/bin/quarto/bin/tools")
+  
   result <- tryCatch({
     rmarkdown::render(
       input = file.path(script_dir, "report.rmd"),
-      output_file = temp_output_file,  # Dočasný soubor
-      intermediates_dir = tempdir(),   # Každý proces má svůj vlastní dočasný adresář
-      knit_root_dir = script_dir,      # Nastavení správného pracovního adresáře
+      output_file = temp_output_file,
+      intermediates_dir = tempdir(),
+      knit_root_dir = script_dir,
       params = list(df = df),
       envir = new.env(),
       clean = TRUE,
       quiet = TRUE
     )
-    
-    # Po úspěšném renderování přejmenovat soubor na finální název
     file.rename(temp_output_file, final_output_file)
-    
-    # 🔥 Odstranění dočasných souborů po generování
-    temp_files <- list.files(
-      path = tempdir(),  
-      pattern = paste0(df$ID, "_", df$Name, ".*\\.log$"), 
-      full.names = TRUE
-    )
-    
-    if (length(temp_files) > 0) {
-      file.remove(temp_files[file.exists(temp_files)])  # Smaže pouze existující soubory
-    }
-    
     list(status = "success", file = final_output_file, id = df$ID, name = df$Name)
   }, error = function(e) {
     list(status = "failed", error = conditionMessage(e), id = df$ID, name = df$Name)
   })
-  
   return(result)
 }
 
 cat("⏳ Spouštím paralelní generování reportů, vyčkejte...\n")
 
-results <- future_lapply(1:nrow(valid_data), function(i) {
-  generate_report(i)
-})
-
+results <- future_lapply(1:nrow(valid_data), generate_report)
 cat("✅ Generování dokončeno.\n")
 
-
-# Roztřídění výsledků
 completed_reports <- Filter(function(x) x$status == "success", results)
 failed_reports <- Filter(function(x) x$status == "failed", results)
 
-# Uložení logu s úspěšnými a neúspěšnými generacemi
-log_file <- file.path(data_dir, paste0("log_", school_code, "_", format(Sys.time(), "%Y-%m-%d_%H-%M"), ".txt"))
-
-num_completed <- length(completed_reports)
-num_failed <- length(failed_reports)
-num_invalid_rows <- nrow(invalid_rows)
+log_file <- file.path(output_dir, paste0("log_", school_code, "_", format(Sys.time(), "%Y-%m-%d_%H-%M"), ".txt"))
 
 log_content <- c(
   "Generování reportů dokončeno",
-  "",
-  paste0("📂 Složka s reporty: ", output_dir),  # Přidá zobrazení cesty k souborům pod hlavičku
-  "",
-  paste0("✅ Celkový počet úspěšně vygenerovaných reportů: ", num_completed),
-  "Úspěšně vygenerované reporty (ID, Jméno):",
-  if (num_completed > 0) {
-    paste(sapply(completed_reports, function(x) paste(x$id, x$name)), collapse = "\n")
-  } else {
-    "Žádné"
-  },
-  "",
-  paste0("⚠️ Celkový počet chyb při generování reportů: ", num_failed),
-  "❌ Chyby při generování reportů:",
-  if (num_failed > 0) {
-    paste(sapply(failed_reports, function(x) paste(x$id, x$name, "- Chyba:", x$error)), collapse = "\n")
-  } else {
-    "Žádné"
-  },
-  "",
-  paste0("⏳ Celkový počet vyřazených řádků kvůli chybějícím hodnotám: ", num_invalid_rows),
-  if (num_invalid_rows > 0) {
-    paste0("⚠️ Vyřazené řádky kvůli chybějícím hodnotám:\n",
-           paste(invalid_rows$Row_Num, invalid_rows$ID, invalid_rows$Name, sep = " - ", collapse = "\n"))
-  } else {
-    "✅ Všechny řádky byly kompletní."
-  }
+  paste0("📂 Složka s reporty: ", output_dir),
+  paste0("✅ Úspěšné: ", length(completed_reports)),
+  if (length(completed_reports) > 0) paste(sapply(completed_reports, function(x) paste(x$id, x$name)), collapse = "\n") else "Žádné",
+  paste0("❌ Chyby: ", length(failed_reports)),
+  if (length(failed_reports) > 0) paste(sapply(failed_reports, function(x) paste(x$id, x$name, "- Chyba:", x$error)), collapse = "\n") else "Žádné",
+  paste0("⚠️ Vyřazeno kvůli NA: ", nrow(invalid_rows)),
+  if (nrow(invalid_rows) > 0) paste(apply(invalid_rows, 1, paste, collapse = " - "), collapse = "\n") else ""
 )
 
 write_lines(log_content, log_file)
-
-msg_box <- tktoplevel()
-tkwm.title(msg_box, "Informace")
-
-# Získání rozměrů obrazovky
-screen_width <- as.integer(tkwinfo("screenwidth", msg_box))
-screen_height <- as.integer(tkwinfo("screenheight", msg_box))
-
-# Nastavení velikosti okna (zvětšeno pro zobrazení cesty)
-win_width <- 500  # Zvětšeno pro delší cesty
-win_height <- 150  # Lehce zvětšeno na výšku
-
-# Výpočet středu obrazovky
-x_pos <- (screen_width - win_width) %/% 2
-y_pos <- (screen_height - win_height) %/% 2
-
-# Nastavení pozice okna na střed
-tkwm.geometry(msg_box, paste0(win_width, "x", win_height, "+", x_pos, "+", y_pos))
-
-# Přidání textu zprávy
-frame <- tkframe(msg_box)
-tkgrid(frame, row = 0, column = 0, sticky = "nsew")
-tkgrid.columnconfigure(msg_box, 0, weight = 1)
-tkgrid.columnconfigure(frame, 0, weight = 1)
-
-# Definice zpráv
-msg1 <- tklabel(frame, text = "Všechny dostupné reporty byly úspěšně vygenerovány!", justify = "center")
-msg2 <- tklabel(frame, text = paste0("Finální soubory: ", output_dir), justify = "center", wraplength = 480)
-msg3 <- tklabel(frame, text = "Podrobnosti najdete v souboru 'log.txt'.", justify = "center")
-
-# Přidání prvků do okna
-tkgrid(msg1, row = 0, column = 0, pady = 5, sticky = "ew")
-tkgrid(msg2, row = 1, column = 0, pady = 5, sticky = "ew")
-tkgrid(msg3, row = 2, column = 0, pady = 5, sticky = "ew")
-
-# Přidání tlačítka OK (zvětšeno)
-ok_button <- tkbutton(frame, text = "OK", width = 12, height = 2, command = function() tkdestroy(msg_box))
-tkgrid(ok_button, row = 3, column = 0, pady = 10)
-
-tkwait.window(msg_box)
+message("📄 Log uložen do: ", log_file)
