@@ -9,10 +9,6 @@ set "R_PATH=C:\Program Files\R\R-4.4.3\bin\Rscript.exe"
 REM Dynamicky nastavíme cestu k uživatelské knihovně R
 set "R_LIBS_USER=%USERPROFILE%\AppData\Local\R\win-library\%R_VERSION%"
 
-REM Zobrazíme cesty pro kontrolu
-echo Rscript path: %R_PATH%
-echo User library path: %R_LIBS_USER%
-echo Script path: %SCRIPT_DIR%
 
 REM Zkontrolujeme, zda existuje Rscript.exe
 if not exist "%R_PATH%" (
