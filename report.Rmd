@@ -243,7 +243,7 @@ Dotazník AFFEXX-KIDS-CZ zkoumá, jak se dítě cítí během cvičení a zda je
 \vspace{-0.3cm}
 \colorbox{headerbg}{\parbox{\textwidth}{\raggedright \textcolor{headertext}{\Large \textbf{Kognice}}}}
 
-Test kognice se skládá ze 3 následujících částí, u nichž jsou uvedeny výsledky (průměr značí o dostatečné úrovni v dané oblasti):
+Test kognice se skládá ze 3 následujících částí, u nichž jsou uvedeny výsledky vždy k dané/testované oblasti:
 
 ```{r results='asis'}
 
@@ -254,7 +254,7 @@ cog_t17 <- df$COG_T17[1]
 
 get_score_category <- function(score) {
   if (score > 121) {
-    return(c("green", "≤121", "Nadprůměr"))
+    return(c("green", "≥121", "Nadprůměr"))
   } else if (score >= 90) {
     return(c("lime", "120–90", "Průměr"))
   } else {
