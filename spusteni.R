@@ -31,10 +31,6 @@ if (requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable())
   script_dir <- normalizePath(getwd())
 }
 
-
-plan(multisession)  
-
-
 invisible_root <- tktoplevel()
 tkwm.withdraw(invisible_root)  # Skryje okno, ale umožní použít jako parent
 
@@ -58,6 +54,8 @@ if (selected_file == "") {
 } else {
   message("📄 Vybraný soubor s daty: ", selected_file)
 }
+
+plan(multisession)  
 
 # Načtení dat
 data <- read_excel(selected_file)
