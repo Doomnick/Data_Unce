@@ -9,7 +9,7 @@ install_if_needed <- function(package_name) {
 packages <- c("rmarkdown", "pandoc","pacman", "rstudioapi", "tcltk", "lubridate", "progressr", "bookdown", "ggplot2", "tidyverse", "officer", "tinytex", "dplyr", "knitr")
 
 # Instalace knihoven, pokud nejsou nainstalovány
-lapply(packages, install_if_needed)
+invisible(lapply(packages, install_if_needed))
 
 
 
