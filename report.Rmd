@@ -274,13 +274,13 @@ cat(paste0("
 \\renewcommand{\\arraystretch}{1.4}
 \\begin{tabular}{|>{\\centering\\arraybackslash}p{3cm}|p{12cm}|}
 \\hline
-\\cellcolor{", score1[1], "} \\multirow{3}{*}{\\centering \\textbf{", score1[2], "} \\\\ \\textbf{", score1[3], "}} & 
+\\cellcolor{", score1[1], "} \\multirow{3}{=}{\\centering \\textbf{", score1[2], "} \\\\ \\textbf{", score1[3], "}} & 
 1. Test rozpoznávání obrázků, zaměřený na vizuální podněty spojené s pracovní pamětí, kdy participant má za úkol rozpoznat sadu obrázků, které mu byly předem předloženy, v poli s rušivými obrázky: \\textbf{", cog_t14, "~dosažených bodů}. \\\\
 \\hline
-\\cellcolor{", score2[1], "} \\multirow{3}{*}{\\centering \\textbf{", score2[2], "} \\\\ \\textbf{", score2[3], "}} & 
+\\cellcolor{", score2[1], "} \\multirow{2}{=}{\\centering \\textbf{", score2[2], "} \\\\ \\textbf{", score2[3], "}} & 
 2. Test řazení názvů a čísel zaměřený na pracovní paměť a pozornost (poslechové cvičení): \\textbf{", cog_t16, "~dosažených bodů}. \\\\
 \\hline
-\\cellcolor{", score3[1], "} \\multirow{3}{*}{\\centering \\textbf{", score3[2], "} \\\\ \\textbf{", score3[3], "}} & 
+\\cellcolor{", score3[1], "} \\multirow{2}{=}{\\centering \\textbf{", score3[2], "} \\\\ \\textbf{", score3[3], "}} & 
 3. Vyhledávání dvojic testující pozornost a exekutivní funkce, kdy participant hledá v pracovním listu dvojici míč–pes: \\textbf{", cog_t17, "~dosažených bodů}. \\\\
 \\hline
 \\end{tabular}
