@@ -233,7 +233,7 @@ popis <- case_when(
 
 ```
 
-Dotazník AFFEXX-KIDS-CZ zkoumá, jak se dítě cítí během cvičení a zda je pro něj příjemné či nikoliv. Zjišťuje také, jak dřívější zkušenosti ovlivňují pocity a představy o cvičení. Celkový výsledek dotazníku je hodnocen na škále 1 až 5. Přičemž 1 znamená nechuť ke cvičení, nezájem. Číslo 5 znamená nadšení, vysokou motivaci ke cvičení.  \vspace{-0.5cm}
+Dotazník AFFEXX-KIDS-CZ zkoumá, jak se dítě cítí během cvičení a zda je pro něj příjemné či nikoliv. Zjišťuje také, jak dřívější zkušenosti ovlivňují pocity a představy o cvičení. Celkový výsledek dotazníku je hodnocen na škále 1 až 5. Přičemž 1 znamená nechuť ke cvičení, nezájem. Číslo 5 znamená nadšení, vysokou motivaci ke cvičení.  \vspace{-0.2cm}
 \begin{center}
 \parbox{0.8\textwidth}{\centering
 \textbf{{VÝSLEDEK VAŠEHO DÍTĚTE JE `r motivace`.}}}
@@ -271,17 +271,17 @@ score3 <- get_score_category(cog_t17)
 cat(paste0("
 \\begin{table}[h]
 \\centering
-\\renewcommand{\\arraystretch}{1.4} % Zvýší výšku řádků pro lepší čitelnost
-\\begin{tabular}{>{\\centering\\arraybackslash}p{3cm} p{12cm}} % První sloupec centrovaný, druhý bez hranic
+\\renewcommand{\\arraystretch}{1.4}
+\\begin{tabular}{|>{\\centering\\arraybackslash}p{3cm}|p{12cm}|}
 \\hline
 \\cellcolor{", score1[1], "} \\multirow{3}{=}{\\centering \\textbf{", score1[2], "} \\\\ \\textbf{", score1[3], "}} & 
 1. Test rozpoznávání obrázků, zaměřený na vizuální podněty spojené s pracovní pamětí, kdy participant má za úkol rozpoznat sadu obrázků, které mu byly předem předloženy, v poli s rušivými obrázky: \\textbf{", cog_t14, "~dosažených bodů}. \\\\
 \\hline
-\\cellcolor{", score2[1], "} \\multirow{1.9}{=}{\\centering \\textbf{", score2[2], "} \\\\ \\textbf{", score2[3], "}} & 
+\\cellcolor{", score2[1], "} \\multirow{3}{=}{\\centering \\textbf{", score2[2], "} \\\\ \\textbf{", score2[3], "}} & 
 2. Test řazení názvů a čísel zaměřený na pracovní paměť a pozornost (poslechové cvičení): \\textbf{", cog_t16, "~dosažených bodů}. \\\\
 \\hline
-\\cellcolor{", score3[1], "} \\multirow{1.9}{=}{\\centering \\textbf{", score3[2], "} \\\\ \\textbf{", score3[3], "}} & 
-3. Vyhledávání dvojic testující pozornost a exekutivní funkce, kdy participant hledá v pracovním listu dvojici míč-pes: \\textbf{", cog_t17, "~dosažených bodů}. \\\\
+\\cellcolor{", score3[1], "} \\multirow{3}{=}{\\centering \\textbf{", score3[2], "} \\\\ \\textbf{", score3[3], "}} & 
+3. Vyhledávání dvojic testující pozornost a exekutivní funkce, kdy participant hledá v pracovním listu dvojici míč–pes: \\textbf{", cog_t17, "~dosažených bodů}. \\\\
 \\hline
 \\end{tabular}
 \\end{table}
