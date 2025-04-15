@@ -272,7 +272,6 @@ score3 <- get_score_category(cog_t17)
 cat(paste0("
 \\begin{table}[h]
 \\centering
-\\setlength{\\arrayrulewidth}{0.7pt}
 \\renewcommand{\\arraystretch}{1.4}
 \\begin{tabular}{|>{\\centering\\arraybackslash}p{3cm}|p{12cm}|}
 \\hline
