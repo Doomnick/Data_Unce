@@ -29,3 +29,5 @@ if (!requireNamespace("tinytex", quietly = TRUE)) {
   install.packages("tinytex")
 }
 tinytex::install_tinytex()
+tinytex::tlmgr_update()
+tinytex::tlmgr_install("makecell")
